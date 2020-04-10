@@ -4,7 +4,7 @@
 # educational purposes provided that (1) you do not distribute or publish
 # solutions, (2) you retain this notice, and (3) you provide clear
 # attribution to UC Berkeley, including a link to http://ai.berkeley.edu.
-# 
+#
 # Attribution Information: The Pacman AI projects were developed at UC Berkeley.
 # The core projects and autograders were primarily created by John DeNero
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
@@ -317,6 +317,7 @@ class PacmanGraphics:
             fx, fy = self.getPosition(prevPacman)
             px, py = self.getPosition(pacman)
             frames = 4.0
+            if abs(fx - px) == self.width - 1 or abs(fy - py) == self.height - 1: frames = 1.0
             for i in range(1,int(frames) + 1):
                 pos = px*i/frames + fx*(frames-i)/frames, py*i/frames + fy*(frames-i)/frames
                 self.movePacman(pos, self.getDirection(pacman), image)
