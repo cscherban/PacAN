@@ -4,7 +4,7 @@
 # educational purposes provided that (1) you do not distribute or publish
 # solutions, (2) you retain this notice, and (3) you provide clear
 # attribution to UC Berkeley, including a link to http://ai.berkeley.edu.
-# 
+#
 # Attribution Information: The Pacman AI projects were developed at UC Berkeley.
 # The core projects and autograders were primarily created by John DeNero
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
@@ -32,16 +32,19 @@ class Layout:
         self.capsules = []
         self.agentPositions = []
         self.numGhosts = 0
+        self.teleports = set()
         self.processLayoutText(layoutText)
         self.layoutText = layoutText
         self.totalFood = len(self.food.asList())
         # self.initializeVisibilityMatrix()
+
 
     def getNumGhosts(self):
         return self.numGhosts
 
     def initializeVisibilityMatrix(self):
         global VISIBILITY_MATRIX_CACHE
+        #TODO TEST
         if reduce(str.__add__, self.layoutText) not in VISIBILITY_MATRIX_CACHE:
             from game import Directions
             vecs = [(-0.5,0), (0.5,0),(0,-0.5),(0,0.5)]
@@ -128,6 +131,14 @@ class Layout:
         elif layoutChar in  ['1', '2', '3', '4']:
             self.agentPositions.append( (int(layoutChar), (x,y)))
             self.numGhosts += 1
+        elif layoutChar == "T":
+            #This is for being able to go off the map
+            #TODO MAKE SURE THIS IS OK
+            # TELEPORTS DEFAULT TO HAVING FOOD
+            self.teleports.add((x,y))
+            self.agentPositions.append( ("T", (x,y)))
+            self.food[x][y] = True
+
 def getLayout(name, back = 2):
     if name.endswith('.lay'):
         layout = tryToLoad('layouts/' + name)

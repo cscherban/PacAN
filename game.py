@@ -4,7 +4,7 @@
 # educational purposes provided that (1) you do not distribute or publish
 # solutions, (2) you retain this notice, and (3) you provide clear
 # attribution to UC Berkeley, including a link to http://ai.berkeley.edu.
-# 
+#
 # Attribution Information: The Pacman AI projects were developed at UC Berkeley.
 # The core projects and autograders were primarily created by John DeNero
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
@@ -76,9 +76,12 @@ class Configuration:
     horizontally and y increases vertically.  Therefore, north is the direction of increasing y, or (0,1).
     """
 
-    def __init__(self, pos, direction):
+    def __init__(self, pos, direction, map_width = None, map_height = None):
         self.pos = pos
         self.direction = direction
+        self.map_width = map_width
+        self.map_height= map_height
+
 
     def getPosition(self):
         return (self.pos)
@@ -115,7 +118,19 @@ class Configuration:
         direction = Actions.vectorToDirection(vector)
         if direction == Directions.STOP:
             direction = self.direction # There is no stop direction
-        return Configuration((x + dx, y+dy), direction)
+
+        next_x = x + dx
+        next_y = y + dy
+        if next_x < 0: next_x = self.map_width - 1
+        elif next_x >=  self.map_width: next_x = 0
+
+        #Let Y wrap around
+        if next_y < 0: next_y = self.map_height - 1
+        elif next_y >= self.map_height: next_y = 0
+
+        return Configuration((next_x, next_y), direction, self.map_width, self.map_width)
+
+
 
 class AgentState:
     """
@@ -342,6 +357,15 @@ class Actions:
             dx, dy = vec
             next_y = y_int + dy
             next_x = x_int + dx
+
+            # Let X Wrap Around
+            if next_x < 0: next_x = walls.width - 1
+            elif next_x >=  walls.width: next_x = 0
+
+            #Let Y wrap around
+            if next_y < 0: next_y = walls.height - 1
+            elif next_y >= walls.height: next_y = 0
+
             if not walls[next_x][next_y]: possible.append(dir)
 
         return possible
@@ -354,18 +378,35 @@ class Actions:
         neighbors = []
         for dir, vec in Actions._directionsAsList:
             dx, dy = vec
+
+            #DO x
             next_x = x_int + dx
-            if next_x < 0 or next_x == walls.width: continue
+            if next_x < 0: next_x = walls.width - 1
+            elif next_x >=  walls.width: next_x = 0
+
+            # Do Y
             next_y = y_int + dy
-            if next_y < 0 or next_y == walls.height: continue
+            if next_y < 0: next_y = walls.height - 1
+            elif next_y >= walls.height: next_y = 0
+
             if not walls[next_x][next_y]: neighbors.append((next_x, next_y))
+
         return neighbors
     getLegalNeighbors = staticmethod(getLegalNeighbors)
 
     def getSuccessor(position, action):
         dx, dy = Actions.directionToVector(action)
         x, y = position
-        return (x + dx, y + dy)
+        next_x = x + dx
+        next_y = y + dy
+
+        if next_x < 0: next_x = walls.width - 1
+        elif next_x >=  walls.width: next_x = 0
+
+        #Let Y wrap around
+        if next_y < 0: next_y = walls.height - 1
+        elif next_y >= walls.height: next_y = 0
+        return (next_x, next_y)
     getSuccessor = staticmethod(getSuccessor)
 
 class GameStateData:
@@ -501,7 +542,7 @@ class GameStateData:
             if not isPacman:
                 if numGhosts == numGhostAgents: continue # Max ghosts reached already
                 else: numGhosts += 1
-            self.agentStates.append( AgentState( Configuration( pos, Directions.STOP), isPacman) )
+            self.agentStates.append( AgentState( Configuration( pos, Directions.STOP, layout.width, layout.height), isPacman) )
         self._eaten = [False for a in self.agentStates]
 
 try:
