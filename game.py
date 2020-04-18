@@ -685,7 +685,10 @@ class Game:
             self.mute(agentIndex)
             if self.catchExceptions:
                 try:
-                    timed_func = TimeoutFunction(agent.getAction, int(self.rules.getMoveTimeout(agentIndex)) - int(move_time))
+                    timed_func = TimeoutFunction(agent.getAction, int(self.rules.getMoveTimeout(
+                    
+                    
+                    )) - int(move_time))
                     try:
                         start_time = time.time()
                         if skip_action:
@@ -739,6 +742,12 @@ class Game:
                     return
             else:
                 self.state = self.state.generateSuccessor( agentIndex, action )
+                if "train" in dir(agent) and "update_memory" in dir(agent):
+                    try:
+                        agent.update_memory(self, action, self.state, self.state.getScore(), self.gameOver)
+                        agent.train(self.gameOver)
+                    except:
+                        print("ahhhh")
 
             # Change the display
             self.display.update( self.state.data )
@@ -767,4 +776,6 @@ class Game:
                     self._agentCrash(agentIndex)
                     self.unmute()
                     return
+                
         self.display.finish()
+        
