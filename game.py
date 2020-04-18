@@ -746,8 +746,8 @@ class Game:
                     try:
                         agent.update_memory(self, action, self.state, self.state.getScore(), self.gameOver)
                         agent.train(self.gameOver)
-                    except:
-                        print("ahhhh")
+                    except Error as e:
+                        print(e)
 
             # Change the display
             self.display.update( self.state.data )
