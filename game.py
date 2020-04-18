@@ -743,11 +743,11 @@ class Game:
             else:
                 self.state = self.state.generateSuccessor( agentIndex, action )
                 if "train" in dir(agent) and "update_memory" in dir(agent):
-                    try:
-                        agent.update_memory(self, action, self.state, self.state.getScore(), self.gameOver)
-                        agent.train(self.gameOver)
-                    except Error as e:
-                        print(e)
+#                     try:
+                    agent.update_memory(action, self.state, self.state.getScore(), self.gameOver)
+                    agent.train(self.gameOver)
+#                     except Exception as e:
+#                         print(e)
 
             # Change the display
             self.display.update( self.state.data )
