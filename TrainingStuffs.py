@@ -29,7 +29,7 @@ def convert_single_state(game_state):
     powerup = np.zeros((PLANE_WIDTH, PLANE_HEIGHT))
     state_capsules = game_state.getCapsules()
     for capsule in state_capsules:
-        powerup[capsule[1], capsule[0]] = 1
+        powerup[capsule[0], capsule[1]] = 1
 
     fruit = np.zeros((PLANE_WIDTH, PLANE_HEIGHT))
     
