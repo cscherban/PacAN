@@ -35,8 +35,7 @@ def convert_single_state(game_state):
     
     pacman = np.zeros((PLANE_WIDTH, PLANE_HEIGHT))
     state_pacman_position = game_state.getPacmanPosition()
-    powerup[state_pacman_position[1], state_pacman_position[0]] = 1
-
+    powerup[state_pacman_position[0], state_pacman_position[1]] = 1
     state_ghost_positions = game_state.getGhostPositions()
     
     # Red Ghost
