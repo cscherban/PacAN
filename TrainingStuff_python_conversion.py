@@ -44,32 +44,32 @@ if gpus:
 
 
 # Pacman Agent, or custom defined if needed
-# @ Sergey, key thing to note, you should 
+# @ Sergey, key thing to note, you should
 # always check if a resulting action is legal
 # Else just have pacman stay in place
-# This basically allows the network to just keep 
+# This basically allows the network to just keep
 # Pacman in a cubby for a bit
 class SmartAgent(Agent):
-    
+
     def __init__(self, model, temperature):
         self.model = model
         self.temperature = temperature
         self.last_input = None
-        
+
     def init_training(self, model):
         self.is_train = True
         self.target_model = model
         self.target_model.set_weights(self.model.get_weights())
         self.replay_memory = deque(maxlen=REPLAY_MEMORY_SIZE)
         self.target_update_counter = 0
-    
+
     def getAction(self, state):
         network_input = convert_state_to_input(state, self.last_input)
         self.last_input = network_input
-        
+
         predictions = self.model.predict(np.array([network_input]))[0]
         probs = tf.nn.softmax(predictions).numpy()
-        
+
         new_probs = np.zeros(probs.shape)
         prob_sum = 0.0
         power = 1.0 / self.temperature
@@ -78,9 +78,9 @@ class SmartAgent(Agent):
             prob_sum += p
             new_probs[i] = p
         probs = new_probs / prob_sum
-        
+
         move = select_from_distribution(probs)
-        
+
         action = [Directions.NORTH, Directions.EAST, Directions.SOUTH, Directions.WEST][move]
         if action in state.getLegalPacmanActions():
             return action
@@ -88,31 +88,31 @@ class SmartAgent(Agent):
             legals = list(state.getLegalPacmanActions())
             legals.remove(Directions.STOP)
             return random.choice(legals)
-        
+
     def update_memory(self, action, next_state, reward, done):
         if self.is_train:
             self.replay_memory.append((self.last_input, action, convert_state_to_input(next_state, self.last_input), reward, done))
-    
+
     def train(self, is_terminal_state):
         if not self.is_train:
             return
         if len(self.replay_memory) < MIN_REPLAY_MEMORY_SIZE:
             return
         minibatch = random.sample(self.replay_memory, MINIBATCH_SIZE)
-        
+
         current_states = np.array([transition[0] for transition in minibatch])
         current_qs_list = self.model.predict(current_states)
-        
+
         new_current_states = np.array([transition[2] for transition in minibatch])
         future_qs_list = self.target_model.predict(new_current_states)
 
         X = []
         y = []
-        
+
         actionIndexMap = {
-            Directions.NORTH: 0, 
-            Directions.EAST: 1, 
-            Directions.SOUTH: 2, 
+            Directions.NORTH: 0,
+            Directions.EAST: 1,
+            Directions.SOUTH: 2,
             Directions.WEST: 3
         }
 
@@ -167,7 +167,7 @@ class MyGhostAgent( Agent ):
 # In[4]:
 
 
-#define the ghost agent ___otherwise import it here. 
+#define the ghost agent ___otherwise import it here.
 class SmartGhost( MyGhostAgent ):
     def __init__( self, index ):
         self.index = index
@@ -233,7 +233,7 @@ def runGames( layout, pacman, ghosts, numGames, record, numTraining = 0, catchEx
     for i in range( numGames ):
         beQuiet = i < numTraining
         game = rules.newGame( layout, pacman, ghosts, gameDisplay, True, catchExceptions)
-        game.run()
+        game.run(maxMoves=GAME_MOVE_LIMIT)
         if not beQuiet: games.append(game)
 
         if record:
@@ -250,7 +250,7 @@ def runGames( layout, pacman, ghosts, numGames, record, numTraining = 0, catchEx
         winRate = wins.count(True)/ float(len(wins))
         #HNere is where you propogate the error hum
         # oh well
-        
+
         print 'Average Score:', sum(scores) / float(len(scores))
         #print 'Scores:       ', ', '.join([str(score) for score in scores])
         print 'Win Rate:      %d/%d (%.2f)' % (wins.count(True), len(wins), winRate)
@@ -267,12 +267,11 @@ smart_agent_model.init_training(keras.models.load_model('models/smart_agent_mode
 smart_agent_model.model.save('models/smart_agent_model')
 while True:
     runGames(**args)
-    smart_agent_model.save('models/smart_agent_model') 
+    smart_agent_model.save('models/smart_agent_model')
 
 
 # In[ ]:
 
 
 #Option 2: More fine grain control
-# This would require me to rewrite the run method. This is ok too, just need a heads up. 
-
+# This would require me to rewrite the run method. This is ok too, just need a heads up.
