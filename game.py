@@ -611,7 +611,6 @@ class Game:
         """
         self.display.initialize(self.state.data)
         self.numMoves = 0
-
         ###self.display.initialize(self.state.makeObservation(1).data)
         # inform learning agents of the game start
         for i in range(len(self.agents)):
@@ -651,8 +650,9 @@ class Game:
 
         agentIndex = self.startingIndex
         numAgents = len( self.agents )
-
-        while (not self.gameOver and maxMoves > self.numMoves):
+        moves = 0.0
+        while (not self.gameOver and maxMoves > moves):
+            moves += 1.0 / float(numAgents)
             # Fetch the next agent
             agent = self.agents[agentIndex]
             move_time = 0
@@ -776,6 +776,6 @@ class Game:
                     self._agentCrash(agentIndex)
                     self.unmute()
                     return
-        print("game over")   
+
         self.display.finish()
         
