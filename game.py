@@ -605,7 +605,7 @@ class Game:
         sys.stderr = OLD_STDERR
 
 
-    def run( self ):
+    def run( self, maxMoves=float("inf")):
         """
         Main control loop for game play.
         """
@@ -652,7 +652,7 @@ class Game:
         agentIndex = self.startingIndex
         numAgents = len( self.agents )
 
-        while not self.gameOver:
+        while (not self.gameOver and maxMoves > self.numMoves):
             # Fetch the next agent
             agent = self.agents[agentIndex]
             move_time = 0
@@ -776,6 +776,6 @@ class Game:
                     self._agentCrash(agentIndex)
                     self.unmute()
                     return
-                
+        print("game over")   
         self.display.finish()
         
