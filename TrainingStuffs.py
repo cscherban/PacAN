@@ -2,6 +2,11 @@ import numpy as np
 from Constants import *
 import random
 
+def softmax(arr):
+    max_val = np.max(arr)
+    numerator = np.exp(arr - max_val)
+    return numerator / np.sum(numerator)
+
 def select_from_distribution(distribution):
     selection = random.random()
     total = 0.0

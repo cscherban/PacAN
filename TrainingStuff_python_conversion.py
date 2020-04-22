@@ -3,7 +3,6 @@
 
 # In[1]:
 
-
 #Necessary Imports
 from pacman import GhostRules, PacmanRules, ClassicGameRules, GameState
 from game import GameStateData
@@ -22,6 +21,10 @@ from TrainingStuffs import *
 import numpy as np
 from Constants import *
 import tensorflow as tf
+
+import logging
+tf.get_logger().setLevel(logging.ERROR)
+
 from tensorflow import keras
 import random
 
@@ -67,9 +70,9 @@ class SmartAgent(Agent):
         network_input = convert_state_to_input(state, self.last_input)
         self.last_input = network_input
 
-        predictions = self.model.predict(np.array([network_input]))[0]
-        probs = tf.nn.softmax(predictions).numpy()
-
+        predictions = self.model.predict_on_batch(np.array([network_input]))[0]
+        probs = softmax(predictions)
+        
         new_probs = np.zeros(probs.shape)
         prob_sum = 0.0
         power = 1.0 / self.temperature
@@ -78,7 +81,7 @@ class SmartAgent(Agent):
             prob_sum += p
             new_probs[i] = p
         probs = new_probs / prob_sum
-
+        
         move = select_from_distribution(probs)
 
         action = [Directions.NORTH, Directions.EAST, Directions.SOUTH, Directions.WEST][move]
@@ -92,6 +95,8 @@ class SmartAgent(Agent):
     def update_memory(self, action, next_state, reward, done):
         if self.is_train:
             self.replay_memory.append((self.last_input, action, convert_state_to_input(next_state, self.last_input), reward, done))
+        if done:
+            self.last_input = None
 
     def train(self, is_terminal_state):
         if not self.is_train:
@@ -197,7 +202,7 @@ def create_model_sequential_api():
                             input_shape=(TIMESTEP_PLANES*INPUT_TIMESTEPS, PLANE_WIDTH, PLANE_HEIGHT)),
         keras.layers.Flatten(data_format="channels_first"),
         keras.layers.Dense(128, activation='relu'),
-        keras.layers.Dense(4, activation='tanh')
+        keras.layers.Dense(4, activation='relu')
     ])
     model.compile(
         optimizer=keras.optimizers.SGD(lr=LEARNING_RATE, decay=DECAY, momentum=MOMENTUM),
@@ -213,7 +218,7 @@ ghosts = [SmartGhost, MyGhostAgent,MyGhostAgent,MyGhostAgent]
 args['ghosts'] = [ghosts[i](i+1) for i in range(len(ghosts))]
 
 args['numTraining'] = 0
-args['numGames'] = 100
+args['numGames'] = 10
 args['record'] = True
 args['catchExceptions'] = False
 args['timeout'] = 30
@@ -262,12 +267,17 @@ def runGames( layout, pacman, ghosts, numGames, record, numTraining = 0, catchEx
 # In[ ]:
 
 # The model needs to be created twice (once for evaluation and once for training)
-smart_agent_model.model = keras.models.load_model('models/smart_agent_model')
-smart_agent_model.init_training(keras.models.load_model('models/smart_agent_model'))
+import sys
+if len(sys.argv) > 1:
+    smart_agent_model.model = create_model_sequential_api()
+    smart_agent_model.init_training(create_model_sequential_api())
+else:
+    smart_agent_model.model = keras.models.load_model('models/smart_agent_model')
+    smart_agent_model.init_training(keras.models.load_model('models/smart_agent_model'))
 smart_agent_model.model.save('models/smart_agent_model')
 while True:
     runGames(**args)
-    smart_agent_model.save('models/smart_agent_model')
+    smart_agent_model.model.save('models/smart_agent_model')
 
 
 # In[ ]:
