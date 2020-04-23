@@ -96,7 +96,7 @@ class SmartAgent(Agent):
         if next_state.isWin():
             reward = 1000
         elif next_state.isLose():
-            reward = -1000
+            reward = -1
         if self.is_train:
             self.replay_memory.append((self.last_input, action, convert_state_to_input(next_state, self.last_input), reward, done))
         if done:
@@ -193,7 +193,7 @@ class SmartGhost( MyGhostAgent ):
 
 
 args = dict()
-args['layout'] = layout.getLayout("originalClassic.lay")
+args['layout'] = layout.getLayout(USED_LAYOUT)
 if args['layout'] == None: raise Exception("The layout " + options.layout + " cannot be found")
 
 def create_model_sequential_api():
@@ -201,10 +201,10 @@ def create_model_sequential_api():
         keras.layers.Conv2D(filters=16,
                             kernel_size=3,
                             strides=(1, 1),
-                            data_format="channels_first",
+                            data_format="channels_last",
                             activation="relu",
                             input_shape=(TIMESTEP_PLANES*INPUT_TIMESTEPS, PLANE_WIDTH, PLANE_HEIGHT)),
-        keras.layers.Flatten(data_format="channels_first"),
+        keras.layers.Flatten(data_format="channels_last"),
         keras.layers.Dense(128, activation='relu'),
         keras.layers.Dense(4, activation='relu')
     ])
@@ -215,7 +215,7 @@ def create_model_sequential_api():
     )
     return model
 
-smart_agent_model = SmartAgent(None, 1)
+smart_agent_model = SmartAgent(None, 7)
 args['pacman'] = smart_agent_model
 
 ghosts = [SmartGhost, MyGhostAgent,MyGhostAgent,MyGhostAgent]
@@ -226,7 +226,7 @@ args['numGames'] = 10
 args['record'] = True
 args['catchExceptions'] = False
 args['timeout'] = 30
-NullGraph = False
+NullGraph = not RUN_GRAPHICS
 if NullGraph:
     import textDisplay
     args["gameDisplay"] = textDisplay.NullGraphics()
