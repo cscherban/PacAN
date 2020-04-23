@@ -226,6 +226,13 @@ args['numGames'] = 10
 args['record'] = True
 args['catchExceptions'] = False
 args['timeout'] = 30
+NullGraph = False
+if NullGraph:
+    import textDisplay
+    args["graphicsDisplay"] = textDisplay.NullGraphics()
+else:
+    import graphicsDisplay
+    args["graphicsDisplay"] = graphicsDisplay.PacmanGraphics(.5, frameTime = .01)
 
 
 # In[6]:
@@ -233,8 +240,7 @@ args['timeout'] = 30
 
 #define a "run" function for the iterations
 import textDisplay
-def runGames( layout, pacman, ghosts, numGames, record, numTraining = 0, catchExceptions=False, timeout=30 ):
-    gameDisplay = textDisplay.NullGraphics()
+def runGames( layout,gameDisplay, pacman, ghosts, numGames, record, numTraining = 0, catchExceptions=False, timeout=30 ):
     rules = ClassicGameRules(timeout)
     rules.quiet = True
     games = []
