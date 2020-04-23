@@ -686,8 +686,8 @@ class Game:
             if self.catchExceptions:
                 try:
                     timed_func = TimeoutFunction(agent.getAction, int(self.rules.getMoveTimeout(
-                    
-                    
+
+
                     )) - int(move_time))
                     try:
                         start_time = time.time()
@@ -732,6 +732,7 @@ class Game:
 
             # Execute the action
             self.moveHistory.append( (agentIndex, action) )
+            oldScore = self.state.getScore()
             if self.catchExceptions:
                 try:
                     self.state = self.state.generateSuccessor( agentIndex, action )
@@ -742,10 +743,11 @@ class Game:
                     return
             else:
                 self.state = self.state.generateSuccessor( agentIndex, action )
-                if "train" in dir(agent) and "update_memory" in dir(agent):
+
+            if "train" in dir(agent) and "update_memory" in dir(agent):
 #                     try:
-                    agent.update_memory(action, self.state, self.state.getScore(), self.gameOver)
-                    agent.train(self.gameOver)
+                agent.update_memory(action, self.state,self.state.getScore() - oldScore, self.gameOver)
+                agent.train(self.gameOver)
 #                     except Exception as e:
 #                         print(e)
 
@@ -778,4 +780,3 @@ class Game:
                     return
 
         self.display.finish()
-        

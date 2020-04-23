@@ -72,7 +72,7 @@ class SmartAgent(Agent):
 
         predictions = self.model.predict_on_batch(np.array([network_input]))[0]
         probs = softmax(predictions)
-        
+
         new_probs = np.zeros(probs.shape)
         prob_sum = 0.0
         power = 1.0 / self.temperature
@@ -81,7 +81,7 @@ class SmartAgent(Agent):
             prob_sum += p
             new_probs[i] = p
         probs = new_probs / prob_sum
-        
+
         move = select_from_distribution(probs)
 
         action = [Directions.NORTH, Directions.EAST, Directions.SOUTH, Directions.WEST][move]
@@ -93,6 +93,10 @@ class SmartAgent(Agent):
             return random.choice(legals)
 
     def update_memory(self, action, next_state, reward, done):
+        if next_state.isWin():
+            reward = 1000
+        elif next_state.isLose():
+            reward = -1000
         if self.is_train:
             self.replay_memory.append((self.last_input, action, convert_state_to_input(next_state, self.last_input), reward, done))
         if done:
