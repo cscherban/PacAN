@@ -229,10 +229,10 @@ args['timeout'] = 30
 NullGraph = False
 if NullGraph:
     import textDisplay
-    args["graphicsDisplay"] = textDisplay.NullGraphics()
+    args["gameDisplay"] = textDisplay.NullGraphics()
 else:
     import graphicsDisplay
-    args["graphicsDisplay"] = graphicsDisplay.PacmanGraphics(.5, frameTime = .01)
+    args["gameDisplay"] = graphicsDisplay.PacmanGraphics(.5, frameTime = .01)
 
 
 # In[6]:
