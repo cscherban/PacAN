@@ -101,8 +101,8 @@ class SmartAgent(Agent):
         """
         #print("post",probs)
         move = select_from_distribution(probs)
-        if not moveRandom and self.temperature > EPSILON_FLOOR:
-            self.temperature -= EPSILON_DECREASE
+        if not moveRandom and len(self.replay_memory) >= MIN_REPLAY_MEMORY_SIZE:
+            self.temperature = EPSILON_FLOOR + EPSILON_TIMES * (self.temperature - EPSILON_FLOOR)
         action = [Directions.NORTH, Directions.EAST, Directions.SOUTH, Directions.WEST][move]
         if action in state.getLegalPacmanActions():
             return action
@@ -120,6 +120,7 @@ class SmartAgent(Agent):
         if self.is_train:
             self.replay_memory.append((self.last_input, action, convert_state_to_input(next_state, self.last_input), reward, done))
         if done:
+            print("Epsilon: " + str(self.temperature))
             self.last_input = None
 
     def train(self, is_terminal_state):
