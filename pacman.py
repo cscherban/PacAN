@@ -109,9 +109,10 @@ class GameState:
         else:                # A ghost is moving
             GhostRules.applyAction( state, action, agentIndex )
 
-        # Time passes
         if agentIndex == 0:
             state.data.scoreChange += TIME_PENALTY# Penalty for waiting around
+
+            #sTIME_PENALTY -= TIME_PENALTY_INC
         else:
             GhostRules.decrementTimer( state.data.agentStates[agentIndex] )
 

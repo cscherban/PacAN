@@ -650,6 +650,7 @@ class Game:
 
         agentIndex = self.startingIndex
         numAgents = len( self.agents )
+        print(numAgents)
         moves = 0.0
         while (not self.gameOver and maxMoves > moves):
             moves += 1.0 / float(numAgents)
@@ -745,7 +746,7 @@ class Game:
                 self.state = self.state.generateSuccessor( agentIndex, action )
 
             if "train" in dir(agent) and "update_memory" in dir(agent):
-#                     try:
+                #print("Score Change:",self.state.data.scoreChange)
                 agent.update_memory(action, self.state,self.state.getScore() - oldScore, self.gameOver)
                 agent.train(self.gameOver)
 #                     except Exception as e:
