@@ -777,6 +777,14 @@ class Game:
                 boinc.set_fraction_done(self.getProgress())
 
         # inform a learning agent of the game result
+        overString = "Game Over!.."
+        if self.numMoves >= maxMoves:
+            overString += ".....Ran Out of Moves"
+        if self.state.isWin():
+            overString += "....Won Game"
+        elif self.state.isLose():
+            overString += "....Lost Game"
+        print(overString)
         for agentIndex, agent in enumerate(self.agents):
             if "final" in dir( agent ) :
                 try:
@@ -790,7 +798,7 @@ class Game:
                     return
 
             if "train" in dir(agent) and "update_memory" in dir(agent):
-                print("GameOver, Trainig Agent" + str(agentIndex))
+                print("Training Agent" + str(agentIndex))
                 lastObservedScore, lastObservedAction = stateStorage[agentIndex]
                 agent.update_memory(lastObservedAction, self.state,self.state.getScore() - lastObservedScore, True)
                 agent.train(True)
