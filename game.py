@@ -24,6 +24,7 @@ from util import *
 import time, os
 import traceback
 import sys
+import math
 
 #######################
 # Parts worth reading #
@@ -650,15 +651,22 @@ class Game:
 
         agentIndex = self.startingIndex
         numAgents = len( self.agents )
-        print(numAgents)
-        moves = 0.0
-        while (not self.gameOver and maxMoves > moves):
-            moves += 1.0 / float(numAgents)
+        print("Started Game")
+        stateStorage = {}
+        while not self.gameOver:
             # Fetch the next agent
             agent = self.agents[agentIndex]
             move_time = 0
             skip_action = False
             # Generate an observation of the state
+
+            if self.numMoves > 0:
+                if "train" in dir(agent) and "update_memory" in dir(agent):
+                    lastObservedScore, lastObservedAction = stateStorage[agentIndex]
+                    agent.update_memory(lastObservedAction, self.state,self.state.getScore() - lastObservedScore, self.gameOver)
+                    agent.train(self.gameOver)
+
+
             if 'observationFunction' in dir( agent ):
                 self.mute(agentIndex)
                 if self.catchExceptions:
@@ -733,7 +741,7 @@ class Game:
 
             # Execute the action
             self.moveHistory.append( (agentIndex, action) )
-            oldScore = self.state.getScore()
+            stateStorage[agentIndex] = (self.state.getScore(), action)
             if self.catchExceptions:
                 try:
                     self.state = self.state.generateSuccessor( agentIndex, action )
@@ -745,10 +753,6 @@ class Game:
             else:
                 self.state = self.state.generateSuccessor( agentIndex, action )
 
-            if "train" in dir(agent) and "update_memory" in dir(agent):
-                #print("Score Change:",self.state.data.scoreChange)
-                agent.update_memory(action, self.state,self.state.getScore() - oldScore, self.gameOver)
-                agent.train(self.gameOver)
 #                     except Exception as e:
 #                         print(e)
 
@@ -760,7 +764,12 @@ class Game:
             # Allow for game specific conditions (winning, losing, etc.)
             self.rules.process(self.state, self)
             # Track progress
-            if agentIndex == numAgents + 1: self.numMoves += 1
+            if agentIndex == numAgents - 1:
+                self.numMoves += 1
+
+            if self.numMoves >= maxMoves:
+                self.gameOver = True
+
             # Next agent
             agentIndex = ( agentIndex + 1 ) % numAgents
 
@@ -779,5 +788,11 @@ class Game:
                     self._agentCrash(agentIndex)
                     self.unmute()
                     return
+
+            if "train" in dir(agent) and "update_memory" in dir(agent):
+                print("GameOver, Trainig Agent" + str(agentIndex))
+                lastObservedScore, lastObservedAction = stateStorage[agentIndex]
+                agent.update_memory(lastObservedAction, self.state,self.state.getScore() - lastObservedScore, True)
+                agent.train(True)
 
         self.display.finish()
