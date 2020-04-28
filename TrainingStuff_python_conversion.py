@@ -224,7 +224,7 @@ def create_model_sequential_api():
                             input_shape=(TIMESTEP_PLANES*INPUT_TIMESTEPS, PLANE_WIDTH, PLANE_HEIGHT)),
         keras.layers.Flatten(data_format="channels_last"),
         keras.layers.Dense(128, activation='relu'),
-        keras.layers.Dense(4, activation='relu')
+        keras.layers.Dense(4, activation='linear')
     ])
     model.compile(
         optimizer=keras.optimizers.SGD(lr=LEARNING_RATE, decay=DECAY, momentum=MOMENTUM),
