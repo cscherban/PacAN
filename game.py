@@ -663,7 +663,15 @@ class Game:
             if self.numMoves > 0:
                 if "train" in dir(agent) and "update_memory" in dir(agent):
                     lastObservedScore, lastObservedAction = stateStorage[agentIndex]
-                    agent.update_memory(lastObservedAction, self.state,self.state.getScore() - lastObservedScore, self.gameOver)
+                    scoreChange = self.state.getScore() - lastObservedScore
+                    if agent.index == 0:
+                        agent.update_memory(lastObservedAction, self.state,scoreChange, self.gameOver)
+                    else:
+                        reward = -1
+                        # if Pacman Eats a Ghost, -10
+                        if scoreChange > 10:
+                            reward += -10
+                        agent.update_memory(lastObservedAction, self.state,reward, self.gameOver)
                     agent.train(self.gameOver)
 
 
@@ -800,7 +808,12 @@ class Game:
             if "train" in dir(agent) and "update_memory" in dir(agent):
                 print("Training Agent" + str(agentIndex))
                 lastObservedScore, lastObservedAction = stateStorage[agentIndex]
-                agent.update_memory(lastObservedAction, self.state,self.state.getScore() - lastObservedScore, True)
+                reward = 0
+                if agentIndex == 0:
+                    reward = 500 if self.state.isWin() else -500
+                else:
+                    reward = -200 if self.state.isWin() else 500
+                agent.update_memory(lastObservedAction, self.state,reward, True)
                 agent.train(True)
 
         self.display.finish()

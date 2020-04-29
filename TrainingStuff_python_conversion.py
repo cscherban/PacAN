@@ -14,6 +14,7 @@ from util import nearestPoint
 from util import manhattanDistance
 import util, layout
 import sys, types, time, random, os
+from ghostAgents import *
 
 from collections import deque
 
@@ -58,6 +59,7 @@ class SmartAgent(Agent):
         self.model = model
         self.temperature = temperature
         self.last_input = None
+        self.index = 0
 
     def init_training(self, model):
         self.is_train = True
@@ -99,24 +101,21 @@ class SmartAgent(Agent):
             new_probs[i] = p
         probs = new_probs / prob_sum
         """
-        #print("post",probs)
         move = select_from_distribution(probs)
         if not moveRandom and len(self.replay_memory) >= MIN_REPLAY_MEMORY_SIZE:
             self.temperature = EPSILON_FLOOR + EPSILON_TIMES * (self.temperature - EPSILON_FLOOR)
         action = [Directions.NORTH, Directions.EAST, Directions.SOUTH, Directions.WEST][move]
-        if action in state.getLegalPacmanActions():
+        legals = list(state.getLegalActions(self.index))
+        if action in legals:
             return action
         else:
-            #print("going random")
-            legals = list(state.getLegalPacmanActions())
-            legals.remove(Directions.STOP)
+            try:
+                legals.remove(Directions.STOP)
+            except:
+                pass # do nothing
             return random.choice(legals)
 
     def update_memory(self, action, next_state, reward, done):
-        if next_state.isWin():
-            reward = 1000
-        elif next_state.isLose():
-            reward = -1
         if self.is_train:
             self.replay_memory.append((self.last_input, action, convert_state_to_input(next_state, self.last_input), reward, done))
         if done:
@@ -182,33 +181,12 @@ class SmartAgent(Agent):
 # In[3]:
 
 
-class MyGhostAgent( Agent ):
-    def __init__( self, index ):
+class SmartGhost( SmartAgent ):
+    def __init__(self, model, temperature, index):
+        self.model = model
+        self.temperature = temperature
+        self.last_input = None
         self.index = index
-
-    def getAction( self, state ):
-        action = Directions.EAST # Replace This with a call to the model
-        if action in state.getLegalActions( self.index ):
-            return action
-        else:
-            return random.choice( state.getLegalActions( self.index ))
-
-
-# In[4]:
-
-
-#define the ghost agent ___otherwise import it here.
-class SmartGhost( MyGhostAgent ):
-    def __init__( self, index ):
-        self.index = index
-
-    def getAction( self, state ):
-        action = Directions.EAST # Replace This with a call to the model
-        if action in state.getLegalActions( self.index ):
-            return action
-        else:
-            return random.choice( state.getLegalActions( self.index ))
-
 
 args = dict()
 args['layout'] = layout.getLayout(USED_LAYOUT)
@@ -236,9 +214,8 @@ def create_model_sequential_api():
 smart_agent_model = SmartAgent(None, EPSILON)
 args['pacman'] = smart_agent_model
 
-ghosts = [SmartGhost, MyGhostAgent,MyGhostAgent,MyGhostAgent]
+ghosts = [RandomGhost, RandomGhost,RandomGhost,RandomGhost]
 args['ghosts'] = [ghosts[i](i+1) for i in range(len(ghosts))]
-
 args['numTraining'] = 0
 args['numGames'] = 10
 args['record'] = True
@@ -293,20 +270,33 @@ def runGames( layout,gameDisplay, pacman, ghosts, numGames, record, numTraining 
 
 
 # In[ ]:
+smart_ghost = None
+if SMART_GHOST:
+    smart_ghost = SmartGhost(None, EPSILON, 1)
+    args["ghosts"][0] = smart_ghost
 
-# The model needs to be created twice (once for evaluation and once for training)
 import sys
 if len(sys.argv) > 1:
     smart_agent_model.model = create_model_sequential_api()
     smart_agent_model.init_training(create_model_sequential_api())
+    if smart_ghost:
+        smart_ghost.model = create_model_sequential_api()
+        smart_ghost.init_training(create_model_sequential_api())
 else:
     smart_agent_model.model = keras.models.load_model('models/smart_agent_model')
     smart_agent_model.init_training(keras.models.load_model('models/smart_agent_model'))
+    if smart_ghost:
+        smart_ghost.model = keras.models.load_model('models/smart_ghost_model')
+        smart_ghost.init_training(keras.models.load_model('models/smart_ghost_model'))
 smart_agent_model.model.save('models/smart_agent_model')
+if smart_ghost:
+    smart_ghost.model.save('models/smart_ghost_model')
+
 while True:
     runGames(**args)
     smart_agent_model.model.save('models/smart_agent_model')
-
+    if smart_ghost:
+        smart_ghost.model.save('models/smart_ghost_model')
 
 # In[ ]:
 
