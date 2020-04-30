@@ -24,6 +24,7 @@ from util import *
 import time, os
 import traceback
 import sys
+import math
 
 #######################
 # Parts worth reading #
@@ -650,14 +651,30 @@ class Game:
 
         agentIndex = self.startingIndex
         numAgents = len( self.agents )
-        moves = 0.0
-        while (not self.gameOver and maxMoves > moves):
-            moves += 1.0 / float(numAgents)
+        print("Started Game")
+        stateStorage = {}
+        while not self.gameOver:
             # Fetch the next agent
             agent = self.agents[agentIndex]
             move_time = 0
             skip_action = False
             # Generate an observation of the state
+
+            if self.numMoves > 0:
+                if "train" in dir(agent) and "update_memory" in dir(agent):
+                    lastObservedScore, lastObservedAction = stateStorage[agentIndex]
+                    scoreChange = self.state.getScore() - lastObservedScore
+                    if agent.index == 0:
+                        agent.update_memory(lastObservedAction, self.state,scoreChange, self.gameOver)
+                    else:
+                        reward = -1
+                        # if Pacman Eats a Ghost, -10
+                        if scoreChange > 10:
+                            reward += -10
+                        agent.update_memory(lastObservedAction, self.state,reward, self.gameOver)
+                    agent.train(self.gameOver)
+
+
             if 'observationFunction' in dir( agent ):
                 self.mute(agentIndex)
                 if self.catchExceptions:
@@ -686,8 +703,8 @@ class Game:
             if self.catchExceptions:
                 try:
                     timed_func = TimeoutFunction(agent.getAction, int(self.rules.getMoveTimeout(
-                    
-                    
+
+
                     )) - int(move_time))
                     try:
                         start_time = time.time()
@@ -732,6 +749,7 @@ class Game:
 
             # Execute the action
             self.moveHistory.append( (agentIndex, action) )
+            stateStorage[agentIndex] = (self.state.getScore(), action)
             if self.catchExceptions:
                 try:
                     self.state = self.state.generateSuccessor( agentIndex, action )
@@ -742,10 +760,7 @@ class Game:
                     return
             else:
                 self.state = self.state.generateSuccessor( agentIndex, action )
-                if "train" in dir(agent) and "update_memory" in dir(agent):
-#                     try:
-                    agent.update_memory(action, self.state, self.state.getScore(), self.gameOver)
-                    agent.train(self.gameOver)
+
 #                     except Exception as e:
 #                         print(e)
 
@@ -757,7 +772,12 @@ class Game:
             # Allow for game specific conditions (winning, losing, etc.)
             self.rules.process(self.state, self)
             # Track progress
-            if agentIndex == numAgents + 1: self.numMoves += 1
+            if agentIndex == numAgents - 1:
+                self.numMoves += 1
+
+            if self.numMoves >= maxMoves:
+                self.gameOver = True
+
             # Next agent
             agentIndex = ( agentIndex + 1 ) % numAgents
 
@@ -765,6 +785,14 @@ class Game:
                 boinc.set_fraction_done(self.getProgress())
 
         # inform a learning agent of the game result
+        overString = "Game Over!.."
+        if self.numMoves >= maxMoves:
+            overString += ".....Ran Out of Moves"
+        if self.state.isWin():
+            overString += "....Won Game"
+        elif self.state.isLose():
+            overString += "....Lost Game"
+        print(overString)
         for agentIndex, agent in enumerate(self.agents):
             if "final" in dir( agent ) :
                 try:
@@ -777,5 +805,15 @@ class Game:
                     self.unmute()
                     return
 
+            if "train" in dir(agent) and "update_memory" in dir(agent):
+                print("Training Agent" + str(agentIndex))
+                lastObservedScore, lastObservedAction = stateStorage[agentIndex]
+                reward = 0
+                if agentIndex == 0:
+                    reward = 500 if self.state.isWin() else -500
+                else:
+                    reward = -200 if self.state.isWin() else 500
+                agent.update_memory(lastObservedAction, self.state,reward, True)
+                agent.train(True)
+
         self.display.finish()
-        

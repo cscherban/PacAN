@@ -45,6 +45,7 @@ from game import Directions
 from game import Actions
 from util import nearestPoint
 from util import manhattanDistance
+from Constants import *
 import util, layout
 import sys, types, time, random, os
 
@@ -108,9 +109,10 @@ class GameState:
         else:                # A ghost is moving
             GhostRules.applyAction( state, action, agentIndex )
 
-        # Time passes
         if agentIndex == 0:
-            state.data.scoreChange += -TIME_PENALTY # Penalty for waiting around
+            state.data.scoreChange += TIME_PENALTY# Penalty for waiting around
+
+            #sTIME_PENALTY -= TIME_PENALTY_INC
         else:
             GhostRules.decrementTimer( state.data.agentStates[agentIndex] )
 
@@ -261,7 +263,6 @@ class GameState:
 
 SCARED_TIME = 40    # Moves ghosts are scared
 COLLISION_TOLERANCE = 0.7 # How close ghosts must be to Pacman to kill
-TIME_PENALTY = 1 # Number of points lost each round
 
 class ClassicGameRules:
     """
@@ -360,17 +361,18 @@ class PacmanRules:
         x,y = position
         # Eat food
         if state.data.food[x][y]:
-            state.data.scoreChange += 10
+            state.data.scoreChange += FOOD_REWARD
             state.data.food = state.data.food.copy()
             state.data.food[x][y] = False
             state.data._foodEaten = position
             # TODO: cache numFood?
             numFood = state.getNumFood()
             if numFood == 0 and not state.data._lose:
-                state.data.scoreChange += 500
+                state.data.scoreChange += WIN_REWARD
                 state.data._win = True
         # Eat capsule
         if( position in state.getCapsules() ):
+            state.data.scoreChange += CAPSULE_REWARD
             state.data.capsules.remove( position )
             state.data._capsuleEaten = position
             # Reset all ghosts' scared timers
@@ -435,14 +437,14 @@ class GhostRules:
 
     def collide( state, ghostState, agentIndex):
         if ghostState.scaredTimer > 0:
-            state.data.scoreChange += 200
+            state.data.scoreChange += KILL_REWARD
             GhostRules.placeGhost(state, ghostState)
             ghostState.scaredTimer = 0
             # Added for first-person
             state.data._eaten[agentIndex] = True
         else:
             if not state.data._win:
-                state.data.scoreChange -= 500
+                state.data.scoreChange += DIE_PENALTY
                 state.data._lose = True
     collide = staticmethod( collide )
 

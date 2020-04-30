@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
+
 
 #Necessary Imports
 from pacman import GhostRules, PacmanRules, ClassicGameRules, GameState
@@ -14,7 +15,6 @@ from util import nearestPoint
 from util import manhattanDistance
 import util, layout
 import sys, types, time, random, os
-from ghostAgents import *
 
 from collections import deque
 
@@ -22,10 +22,6 @@ from TrainingStuffs import *
 import numpy as np
 from Constants import *
 import tensorflow as tf
-
-import logging
-tf.get_logger().setLevel(logging.ERROR)
-
 from tensorflow import keras
 import random
 
@@ -44,7 +40,7 @@ if gpus:
     print(e)
 
 
-# In[2]:
+# In[ ]:
 
 
 # Pacman Agent, or custom defined if needed
@@ -55,43 +51,25 @@ if gpus:
 # Pacman in a cubby for a bit
 class SmartAgent(Agent):
 
-    def __init__(self, model, temperature):
-        self.model = model
+    def __init__(self, create_model, temperature, train=False):
+        self.model = create_model()
+        self.is_train = train
         self.temperature = temperature
+        if self.is_train:
+            self.target_model = create_model()
+            self.target_model.set_weights(self.model.get_weights())
+            self.replay_memory = deque(maxlen=REPLAY_MEMORY_SIZE)
+            self.target_update_counter = 0
+
         self.last_input = None
-        self.index = 0
-
-    def init_training(self, model):
-        self.is_train = True
-        self.target_model = model
-        self.target_model.set_weights(self.model.get_weights())
-        self.replay_memory = deque(maxlen=REPLAY_MEMORY_SIZE)
-        self.target_update_counter = 0
-        self.num_games_random = NUM_RANDOM_GAMES
-
 
     def getAction(self, state):
         network_input = convert_state_to_input(state, self.last_input)
         self.last_input = network_input
 
-        predictions = self.model.predict_on_batch(np.array([network_input]))[0]
-        probs = softmax(predictions)
-        if np.isnan(probs[0]):
-            print("encountered a nan")
-            print("network input:")
-            print(network_input)
-            print("Prediction:")
-            print(predictions)
+        predictions = self.model.predict(np.array([network_input]))[0]
+        probs = tf.nn.softmax(predictions).numpy()
 
-        moveRandom = self.num_games_random > self.target_update_counter
-        #print(moveRandom)
-        new_probs = np.zeros(probs.shape)
-        if moveRandom or np.random.rand() < self.temperature:
-            probs = np.array([.25,.25,.25,.25])
-        else:
-            new_probs[np.argmax(probs)] = 1
-            probs = new_probs
-        """
         new_probs = np.zeros(probs.shape)
         prob_sum = 0.0
         power = 1.0 / self.temperature
@@ -100,27 +78,20 @@ class SmartAgent(Agent):
             prob_sum += p
             new_probs[i] = p
         probs = new_probs / prob_sum
-        """
+
         move = select_from_distribution(probs)
-        if not moveRandom and len(self.replay_memory) >= MIN_REPLAY_MEMORY_SIZE:
-            self.temperature = EPSILON_FLOOR + EPSILON_TIMES * (self.temperature - EPSILON_FLOOR)
+
         action = [Directions.NORTH, Directions.EAST, Directions.SOUTH, Directions.WEST][move]
-        legals = list(state.getLegalActions(self.index))
-        if action in legals:
+        if action in state.getLegalPacmanActions():
             return action
         else:
-            try:
-                legals.remove(Directions.STOP)
-            except:
-                pass # do nothing
+            legals = list(state.getLegalPacmanActions())
+            legals.remove(Directions.STOP)
             return random.choice(legals)
 
     def update_memory(self, action, next_state, reward, done):
         if self.is_train:
             self.replay_memory.append((self.last_input, action, convert_state_to_input(next_state, self.last_input), reward, done))
-        if done:
-            print("Epsilon: " + str(self.temperature))
-            self.last_input = None
 
     def train(self, is_terminal_state):
         if not self.is_train:
@@ -178,18 +149,42 @@ class SmartAgent(Agent):
             self.target_update_counter = 0
 
 
-# In[3]:
+# In[ ]:
 
 
-class SmartGhost( SmartAgent ):
-    def __init__(self, model, temperature, index):
-        self.model = model
-        self.temperature = temperature
-        self.last_input = None
+class MyGhostAgent( Agent ):
+    def __init__( self, index ):
         self.index = index
 
+    def getAction( self, state ):
+        action = Directions.EAST # Replace This with a call to the model
+        if action in state.getLegalActions( self.index ):
+            return action
+        else:
+            return random.choice( state.getLegalActions( self.index ))
+
+
+# In[ ]:
+
+
+#define the ghost agent ___otherwise import it here.
+class SmartGhost( MyGhostAgent ):
+    def __init__( self, index ):
+        self.index = index
+
+    def getAction( self, state ):
+        action = Directions.EAST # Replace This with a call to the model
+        if action in state.getLegalActions( self.index ):
+            return action
+        else:
+            return random.choice( state.getLegalActions( self.index ))
+
+
+# In[ ]:
+
+
 args = dict()
-args['layout'] = layout.getLayout(USED_LAYOUT)
+args['layout'] = layout.getLayout("smallClassic.lay")
 if args['layout'] == None: raise Exception("The layout " + options.layout + " cannot be found")
 
 def create_model_sequential_api():
@@ -202,48 +197,46 @@ def create_model_sequential_api():
                             input_shape=(TIMESTEP_PLANES*INPUT_TIMESTEPS, PLANE_WIDTH, PLANE_HEIGHT)),
         keras.layers.Flatten(data_format="channels_last"),
         keras.layers.Dense(128, activation='relu'),
-        keras.layers.Dense(4, activation='linear')
+        keras.layers.Dense(4, activation='tanh')
     ])
     model.compile(
-        optimizer=keras.optimizers.SGD(lr=LEARNING_RATE, decay=DECAY, momentum=MOMENTUM),
-        loss=keras.losses.Huber(),
+        optimizer=keras.optimizers.SGD(lr=1e-4, decay=0, momentum=0),
+        loss=keras.losses.categorical_crossentropy,
         metrics=['accuracy']
     )
     return model
 
-smart_agent_model = SmartAgent(None, EPSILON)
-args['pacman'] = smart_agent_model
+args['pacman'] = SmartAgent(create_model_sequential_api, 1, train=True)
 
-ghosts = [RandomGhost, RandomGhost,RandomGhost,RandomGhost]
+ghosts = [SmartGhost, MyGhostAgent]#,MyGhostAgent,MyGhostAgent]
 args['ghosts'] = [ghosts[i](i+1) for i in range(len(ghosts))]
+
 args['numTraining'] = 0
-args['numGames'] = 10
+args['numGames'] = 5
 args['record'] = True
 args['catchExceptions'] = False
-args['timeout'] = 30
-NullGraph = not RUN_GRAPHICS
+args['timeout'] = 1
+NullGraph = True
 if NullGraph:
     import textDisplay
-    args["gameDisplay"] = textDisplay.NullGraphics()
+    args["graphicsDisplay"] = textDisplay.NullGraphics()
 else:
     import graphicsDisplay
-    args["gameDisplay"] = graphicsDisplay.PacmanGraphics(.5, frameTime = .01)
-
-
-# In[6]:
+    args["graphicsDisplay"] = graphicsDisplay.PacmanGraphics(.5, frameTime = .01)
+# In[ ]:
 
 
 #define a "run" function for the iterations
-import textDisplay
-def runGames( layout,gameDisplay, pacman, ghosts, numGames, record, numTraining = 0, catchExceptions=False, timeout=30 ):
+def runGames( layout,gameDisplay,  pacman, ghosts, numGames, record, numTraining = 0, catchExceptions=False, timeout=30 ):
     rules = ClassicGameRules(timeout)
+
     rules.quiet = True
     games = []
 
     for i in range( numGames ):
         beQuiet = i < numTraining
-        game = rules.newGame( layout, pacman, ghosts, gameDisplay, True, catchExceptions)
-        game.run(maxMoves=GAME_MOVE_LIMIT)
+        game = rules.newGame( layout, pacman, ghosts, gameDisplay, beQuiet, catchExceptions)
+        game.run(maxMoves=1.0)
         if not beQuiet: games.append(game)
 
         if record:
@@ -262,41 +255,18 @@ def runGames( layout,gameDisplay, pacman, ghosts, numGames, record, numTraining 
         # oh well
 
         print 'Average Score:', sum(scores) / float(len(scores))
-        #print 'Scores:       ', ', '.join([str(score) for score in scores])
+        print 'Scores:       ', ', '.join([str(score) for score in scores])
         print 'Win Rate:      %d/%d (%.2f)' % (wins.count(True), len(wins), winRate)
-        #print 'Record:       ', ', '.join([ ['Loss', 'Win'][int(w)] for w in wins])
+        print 'Record:       ', ', '.join([ ['Loss', 'Win'][int(w)] for w in wins])
 
     return games
 
 
 # In[ ]:
-smart_ghost = None
-if SMART_GHOST:
-    smart_ghost = SmartGhost(None, EPSILON, 1)
-    args["ghosts"][0] = smart_ghost
 
-import sys
-if len(sys.argv) > 1:
-    smart_agent_model.model = create_model_sequential_api()
-    smart_agent_model.init_training(create_model_sequential_api())
-    if smart_ghost:
-        smart_ghost.model = create_model_sequential_api()
-        smart_ghost.init_training(create_model_sequential_api())
-else:
-    smart_agent_model.model = keras.models.load_model('models/smart_agent_model')
-    smart_agent_model.init_training(keras.models.load_model('models/smart_agent_model'))
-    if smart_ghost:
-        smart_ghost.model = keras.models.load_model('models/smart_ghost_model')
-        smart_ghost.init_training(keras.models.load_model('models/smart_ghost_model'))
-smart_agent_model.model.save('models/smart_agent_model')
-if smart_ghost:
-    smart_ghost.model.save('models/smart_ghost_model')
 
-while True:
-    runGames(**args)
-    smart_agent_model.model.save('models/smart_agent_model')
-    if smart_ghost:
-        smart_ghost.model.save('models/smart_ghost_model')
+runGames(**args)
+
 
 # In[ ]:
 
